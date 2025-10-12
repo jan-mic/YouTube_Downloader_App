@@ -4,6 +4,7 @@ import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QDesktopWidget, QLabel, QTextEdit, QLineEdit, QFrame, QWidget, \
     QComboBox, QPushButton, QFileDialog, QProgressBar
 from pytubefix import YouTube
+import platform
 
 
 class YtDownloaderApp(QWidget):
@@ -141,19 +142,47 @@ class YtDownloaderApp(QWidget):
         file_path, _ = QFileDialog.getSaveFileName(self, "Save As", self.yt_default_filename + '.' + file_extension, file_filter, options=options)
         return file_path
 
+    # def get_ffmpeg_path(self):
+    #     # Jeśli jest zapakowany, użyj wbudowanej ścieżki
+    #     if getattr(sys, 'frozen', False):
+    #         return os.path.join(sys._MEIPASS, "ffmpeg", "ffmpeg.exe")  # Dla Windows
+    #     else:
+    #         return os.path.join(os.getcwd(), "ffmpeg", "ffmpeg.exe")  # Dla normalnego środowiska
+
+    # def get_ffmpeg_path(self):
+    #     ffmpeg_file = "ffmpeg.exe" if platform.system() == "Windows" else "ffmpeg"
+    #
+    #     if getattr(sys, 'frozen', False):
+    #         return os.path.join(sys._MEIPASS, "ffmpeg", ffmpeg_file)
+    #     else:
+    #         return os.path.join(os.path.dirname(__file__), "ffmpeg", ffmpeg_file)
     def get_ffmpeg_path(self):
-        # Jeśli jest zapakowany, użyj wbudowanej ścieżki
         if getattr(sys, 'frozen', False):
-            return os.path.join(sys._MEIPASS, "ffmpeg", "ffmpeg.exe")  # Dla Windows
+            ffmpeg_file = "ffmpeg.exe" if platform.system() == "Windows" else "ffmpeg"
+            return os.path.join(sys._MEIPASS, "ffmpeg", ffmpeg_file)
         else:
-            return os.path.join(os.getcwd(), "ffmpeg", "ffmpeg.exe")  # Dla normalnego środowiska
+            ffmpeg_file = "ffmpeg.exe" if platform.system() == "Windows" else "ffmpeg"
+            return os.path.join(os.path.dirname(__file__), "ffmpeg", ffmpeg_file)
 
     def merge_video_audio(self, video_file, audio_file, file_path):
         #ffmpeg_path = os.path.join(os.getcwd(), "ffmpeg", "ffmpeg.exe")
         ffmpeg_path = self.get_ffmpeg_path()
-        command = f'"{ffmpeg_path}" -i "{video_file}" -i "{audio_file}" -c copy "{file_path}" -y'
+        #command = f'"{ffmpeg_path}" -i "{video_file}" -i "{audio_file}" -c copy "{file_path}" -y'
+        command = [
+            ffmpeg_path,
+            "-i", video_file,
+            "-i", audio_file,
+            "-c:v", "libx264",
+            "-c:a", "aac",
+            "-strict", "experimental",
+            "-b:a", "192k",
+            file_path,
+            "-y"
+        ]
 
-        subprocess.run(command, shell=True)
+
+        # subprocess.run(command, shell=True)
+        subprocess.run(command, stdout=subprocess.DEVNULL)
 
     def get_selected_stream(self, yt, selected_stream_info):
         for stream in yt.streams.fmt_streams:
